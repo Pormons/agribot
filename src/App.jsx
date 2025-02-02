@@ -21,15 +21,21 @@ function App() {
     setIsLoading(true)
 
     try {
-      const formdata = new FormData()
-      formdata.append("question", input)
+      const myHeaders = new Headers();
+      myHeaders.append("Content-Type", "application/json");
+      
+      const raw = JSON.stringify({
+        "question": "hello"
+      });
+      
       const requestOptions = {
         method: "POST",
-        body: formdata,
-        redirect: "follow",
-      }
-
-      const response = await fetch("https://pormonzkie-agrichat.hf.space/ask", requestOptions)
+        headers: myHeaders,
+        body: raw,
+        redirect: "follow"
+      };
+      
+      const response = await fetch("https://6cfe-64-226-63-243.ngrok-free.app/ask", requestOptions)
       if (!response.ok) {
         throw new Error("Network response was not ok")
       }
@@ -54,7 +60,7 @@ function App() {
       </header>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div className="flex-1 mb-12 overflow-y-auto p-4 sm:p-6 lg:p-8">
         <div className="max-w-3xl mx-auto space-y-6">
           {messages.map((msg, index) => (
             <div key={index} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
