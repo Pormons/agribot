@@ -25,7 +25,7 @@ function App() {
       myHeaders.append("Content-Type", "application/json");
       
       const raw = JSON.stringify({
-        "question": "hello"
+        "question": input
       });
       
       const requestOptions = {
@@ -35,13 +35,14 @@ function App() {
         redirect: "follow"
       };
       
-      const response = await fetch("https://6cfe-64-226-63-243.ngrok-free.app/ask", requestOptions)
+      const response = await fetch("https://4532-64-226-63-243.ngrok-free.app/ask", requestOptions)
       if (!response.ok) {
         throw new Error("Network response was not ok")
       }
 
       const data = await response.json()
       const botMessage = { text: data.answer, sender: "bot" }
+      console.log(data);
       setMessages((prevMessages) => [...prevMessages, botMessage])
     } catch (error) {
       console.error("Error sending message:", error)
