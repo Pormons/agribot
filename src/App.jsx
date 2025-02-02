@@ -101,7 +101,7 @@ function App() {
       </div>
 
       {/* Chat Input */}
-      <div className="border-t border-gray-200 bg-white p-4 sm:p-6">
+      <div className="border-t border-gray-200 absolute z-50 bottom-0 left-0 max-w-md min-w-sm bg-white p-4 sm:p-6">
         <div className="max-w-3xl mx-auto">
           <form
             onSubmit={(e) => {
