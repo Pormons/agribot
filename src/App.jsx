@@ -47,11 +47,9 @@ function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Chat Header */}
+    <div className="flex flex-col h-screen max-w-md min-w-sm bg-gray-50">
       <header className="bg-white shadow-sm">
         <div className="max-w-4xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-          <h1 className="text-lg font-semibold text-gray-900">AgriChat</h1>
         </div>
       </header>
 
