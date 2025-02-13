@@ -25,7 +25,7 @@ function App() {
       myHeaders.append("Content-Type", "application/json");
       
       const raw = JSON.stringify({
-        "question": input
+        "query": input
       });
       
       const requestOptions = {
@@ -35,7 +35,7 @@ function App() {
         redirect: "follow"
       };
       
-      const response = await fetch("https://4532-64-226-63-243.ngrok-free.app/ask", requestOptions)
+      const response = await fetch("https://c776-64-226-63-246.ngrok-free.app/chat/", requestOptions)
       if (!response.ok) {
         throw new Error("Network response was not ok")
       }
