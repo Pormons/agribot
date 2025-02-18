@@ -1,148 +1,188 @@
-import { useState, useRef, useEffect } from "react"
+"use client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { AnimatePresence, motion } from "framer-motion";
+import { Send, Sparkles, User } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
-function App() {
-  const [messages, setMessages] = useState([])
-  const [input, setInput] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const messagesEndRef = useRef(null)
+export default function App() {
+  const [messages, setMessages] = useState([
+  ]);
+  const [input, setInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [replyTo, setReplyTo] = useState(null);
+  const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
-  useEffect(scrollToBottom, []) // Updated useEffect dependency
+  useEffect(() => scrollToBottom(), [messages]);
 
-  const sendMessage = async () => {
-    if (input.trim() === "") return
-
-    const newMessage = { text: input, sender: "user" }
-    setMessages([...messages, newMessage])
-    setInput("")
-    setIsLoading(true)
-
-    try {
-      const myHeaders = new Headers();
-      myHeaders.append("Content-Type", "application/json");
-      
-      const raw = JSON.stringify({
-        "query": input
-      });
-      
-      const requestOptions = {
-        method: "POST",
-        headers: myHeaders,
-        body: raw,
-        redirect: "follow"
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (input.trim()) {
+      // Add user's message to the chat
+      const newMessage = {
+        id: String(messages.length + 1),
+        role: "user",
+        content: replyTo ? `Replying to: "${replyTo.content.substring(0, 50)}..."\n\n${input}` : input,
       };
-      
-      const response = await fetch("https://c776-64-226-63-246.ngrok-free.app/chat/", requestOptions)
-      if (!response.ok) {
-        throw new Error("Network response was not ok")
-      }
+      setMessages([...messages, newMessage]);
+      setInput("");
+      setIsTyping(true);
+      setReplyTo(null);
 
-      const data = await response.json()
-      const botMessage = { text: data.answer, sender: "bot" }
-      console.log(data);
-      setMessages((prevMessages) => [...prevMessages, botMessage])
-    } catch (error) {
-      console.error("Error sending message:", error)
-      const errorMessage = { text: "Sorry, I encountered an error.", sender: "bot" }
-      setMessages((prevMessages) => [...prevMessages, errorMessage])
-    } finally {
-      setIsLoading(false)
+      try {
+        // Send the user's message to the API
+        const response = await fetch(import.meta.env.VITE_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            query: newMessage.content, // Pass the user's message as "query"
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch response from the server.");
+        }
+
+        // Parse the API response
+        const data = await response.json();
+
+        // Extract the bot's reply from the API response
+        const botReply = {
+          id: String(messages.length + 2),
+          role: "assistant",
+          content: data.answer || "Sorry, I couldn't process that.", // Use the "answer" field from the API
+        };
+
+        // Add the bot's reply to the chat
+        setMessages((prev) => [...prev, botReply]);
+      } catch (error) {
+        console.error("Error fetching response:", error);
+
+        // Add an error message to the chat if the API fails
+        const errorMessage = {
+          id: String(messages.length + 2),
+          role: "assistant",
+          content: "Oops! Something went wrong. Please try again later.",
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      } finally {
+        setIsTyping(false); // Stop the typing indicator
+      }
     }
-  }
+  };
 
   return (
-    <div className="flex flex-col h-screen max-w-md min-w-sm bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-        </div>
-      </header>
-
-      {/* Chat Messages */}
-      <div className="flex-1 mb-12 overflow-y-auto p-4 sm:p-6 lg:p-8">
-        <div className="max-w-3xl mx-auto space-y-6">
-          {messages.map((msg, index) => (
-            <div key={index} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
-              <div
-                className={`flex items-start space-x-2 max-w-[80%] ${msg.sender === "user" ? "flex-row-reverse space-x-reverse" : ""}`}
+    <div className="flex flex-col h-screen bg-gradient-to-br from-green-50 to-white">
+      <div className="flex-grow overflow-hidden">
+        <div className="h-full overflow-y-auto p-4 sm:p-6 sm:max-w-2xl sm:mx-auto">
+          <div className="space-y-4">
+            {messages.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="flex flex-col items-center mt-24 justify-center h-full text-center"
               >
-                <div
-                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${msg.sender === "user" ? "bg-blue-500" : "bg-gray-300"}`}
-                >
-                  <span className="text-white text-sm font-semibold">{msg.sender === "user" ? "U" : "B"}</span>
+                <div className="w-24 h-24 mb-6 rounded-full bg-green-100 flex items-center justify-center animate-float">
+                  <Sparkles className="w-12 h-12 text-green-500" />
                 </div>
-                <div
-                  className={`rounded-lg p-3 ${msg.sender === "user" ? "bg-blue-500 text-white" : "bg-white text-gray-800"}`}
-                >
-                  {msg.text}
-                </div>
-              </div>
-            </div>
-          ))}
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="flex items-center space-x-2">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
-                  <span className="text-gray-600 text-sm font-semibold">B</span>
-                </div>
-                <div className="bg-white rounded-lg p-3">
-                  <div className="flex space-x-2">
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                    <div
-                      className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
-                      style={{ animationDelay: "0.2s" }}
-                    ></div>
-                    <div
-                      className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
-                      style={{ animationDelay: "0.4s" }}
-                    ></div>
+                <h2 className="text-2xl font-bold text-green-600 mb-2">Welcome to Agri-Bot!</h2>
+                <p className="text-gray-600 mb-4">Start your conversation with our friendly chatbot.</p>
+                <p className="text-lg font-medium text-green-500">Try saying &quot;Hi&quot; or asking a question!</p>
+              </motion.div>
+            )}
+            {messages.map((message) => (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className={`flex items-start space-x-2 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                {message.role === "assistant" && (
+                  <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                )}
+                <div className="flex flex-col max-w-[75%]">
+                  <div
+                    className={`p-3 rounded-lg ${message.role === "user" ? "bg-green-500 text-white" : "bg-white border border-green-200"
+                      }`}
+                  >
+                    {message.content}
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
+                {message.role === "user" && (
+                  <div className="w-8 h-8 rounded-full bg-green-200 flex items-center justify-center shrink-0">
+                    <User className="w-5 h-5 text-green-700" />
+                  </div>
+                )}
+              </motion.div>
+            ))}
+            {isTyping && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center space-x-2"
+              >
+                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <div className="p-3 rounded-lg bg-white border border-green-200">
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Infinity, duration: 1 }}
+                    className="w-6 h-6 flex items-center justify-center"
+                  >
+                    <span className="text-green-500 text-xl">...</span>
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
         </div>
       </div>
-
-      {/* Chat Input */}
-      <div className="border-t border-gray-200 fixed z-50 bottom-0 left-0 max-w-md min-w-sm bg-white p-4 sm:p-6">
-        <div className="max-w-3xl mx-auto">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              sendMessage()
-            }}
-            className="flex space-x-4"
-          >
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your message..."
-              className="flex-1 rounded-md border border-gray-300 bg-white text-gray-900 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={`bg-blue-500 text-white rounded-md px-4 py-2 flex items-center justify-center transition-colors duration-200 ${isLoading ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-600"}`}
+      <div className="bg-white border-t border-green-200 p-4 sm:p-6 sm:max-w-2xl sm:mx-auto w-full">
+        <AnimatePresence>
+          {replyTo && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-2 p-2 bg-green-100 rounded-md text-sm text-green-700 flex items-center justify-between"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
-          </form>
-        </div>
+              <span className="truncate">Replying to: {replyTo.content.substring(0, 50)}...</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setReplyTo(null)}
+                className="text-green-700 hover:text-green-800 shrink-0"
+              >
+                Cancel
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <form onSubmit={handleSubmit} className="flex space-x-2">
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type your message..."
+            className="flex-grow border-green-200 focus:ring-green-500 focus:border-green-500"
+          />
+          <Button type="submit" className="bg-green-500 hover:bg-green-600 text-white">
+            <Send className="w-5 h-5" />
+          </Button>
+        </form>
       </div>
     </div>
-  )
+  );
 }
-
-export default App
-
