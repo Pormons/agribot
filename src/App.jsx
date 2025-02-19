@@ -1,82 +1,82 @@
-"use client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { AnimatePresence, motion } from "framer-motion";
-import { Send, Sparkles, User } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+"use client"
+
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { AnimatePresence, motion } from "framer-motion"
+import { Send, Sparkles, User } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 
 export default function App() {
-  const [messages, setMessages] = useState([
-  ]);
-  const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const [replyTo, setReplyTo] = useState(null);
-  const messagesEndRef = useRef(null);
+  const [messages, setMessages] = useState([])
+  const [input, setInput] = useState("")
+  const [isTyping, setIsTyping] = useState(false)
+  const [replyTo, setReplyTo] = useState(null)
+  const [language, setLanguage] = useState("English")
+  const messagesEndRef = useRef(null)
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
 
-  useEffect(() => scrollToBottom(), [messages]);
+  useEffect(() => scrollToBottom(), [messages]) //Fixed useEffect dependency
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
     if (input.trim()) {
-      // Add user's message to the chat
       const newMessage = {
         id: String(messages.length + 1),
         role: "user",
         content: replyTo ? `Replying to: "${replyTo.content.substring(0, 50)}..."\n\n${input}` : input,
-      };
-      setMessages([...messages, newMessage]);
-      setInput("");
-      setIsTyping(true);
-      setReplyTo(null);
+      }
+      setMessages([...messages, newMessage])
+      setInput("")
+      setIsTyping(true)
+      setReplyTo(null)
 
       try {
-        // Send the user's message to the API
-        const response = await fetch(import.meta.env.VITE_URL, {
+        const response = await fetch(`${import.meta.env.VITE_URL}/chat`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Accept: "application/json",
           },
           body: JSON.stringify({
-            query: newMessage.content, // Pass the user's message as "query"
+            query: newMessage.content,
+            language: language,
           }),
-        });
+        })
 
         if (!response.ok) {
-          throw new Error("Failed to fetch response from the server.");
+          throw new Error("Failed to fetch response from the server.")
         }
 
-        // Parse the API response
-        const data = await response.json();
+        const data = await response.json()
 
-        // Extract the bot's reply from the API response
         const botReply = {
           id: String(messages.length + 2),
           role: "assistant",
-          content: data.answer || "Sorry, I couldn't process that.", // Use the "answer" field from the API
-        };
+          content: data.answer || "Sorry, I couldn't process that.",
+        }
 
-        // Add the bot's reply to the chat
-        setMessages((prev) => [...prev, botReply]);
+        setMessages((prev) => [...prev, botReply])
       } catch (error) {
-        console.error("Error fetching response:", error);
+        console.error("Error fetching response:", error)
 
-        // Add an error message to the chat if the API fails
         const errorMessage = {
           id: String(messages.length + 2),
           role: "assistant",
           content: "Oops! Something went wrong. Please try again later.",
-        };
-        setMessages((prev) => [...prev, errorMessage]);
+        }
+        setMessages((prev) => [...prev, errorMessage])
       } finally {
-        setIsTyping(false); // Stop the typing indicator
+        setIsTyping(false)
       }
     }
-  };
+  }
+
+  const handleLanguageSelect = (value) => {
+    setLanguage(value)
+  }
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-green-50 to-white">
@@ -96,6 +96,23 @@ export default function App() {
                 <h2 className="text-2xl font-bold text-green-600 mb-2">Welcome to Agri-Bot!</h2>
                 <p className="text-gray-600 mb-4">Start your conversation with our friendly chatbot.</p>
                 <p className="text-lg font-medium text-green-500">Try saying &quot;Hi&quot; or asking a question!</p>
+
+                <div className="mt-10">
+                  <div className="mb-2">
+                    <span className="font-medium text-sm text-gray-600">Select Preferred Language</span>
+                  </div>
+
+                  <Select className=" focus:outline-none mt-2" value={language} onValueChange={handleLanguageSelect}>
+                    <SelectTrigger className="w-[180px] bg-white">
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="English">English</SelectItem>
+                      <SelectItem value="Bisaya (Cebuano)">Bisaya</SelectItem>
+                      <SelectItem value="Tagalog">Tagalog</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </motion.div>
             )}
             {messages.map((message) => (
@@ -138,7 +155,7 @@ export default function App() {
                 <div className="p-3 rounded-lg bg-white border border-green-200">
                   <motion.div
                     animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ repeat: Infinity, duration: 1 }}
+                    transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1 }}
                     className="w-6 h-6 flex items-center justify-center"
                   >
                     <span className="text-green-500 text-xl">...</span>
@@ -184,5 +201,6 @@ export default function App() {
         </form>
       </div>
     </div>
-  );
+  )
 }
+
