@@ -9,6 +9,9 @@ import Header from "./components/navbar"
 import useLanguageStore from "./store/LanguageStore"
 import useAuthStore from "./store/useAuthStore"
 import { supabase } from "@/lib/supabase"
+import { Client } from "@gradio/client";
+import Markdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 export default function App() {
   const setSignedIn = useAuthStore(state => state.setSignedIn);
@@ -17,6 +20,7 @@ export default function App() {
   const [isTyping, setIsTyping] = useState(false)
   const [replyTo, setReplyTo] = useState(null)
   const language = useLanguageStore(state => state.language);
+  const gen = useLanguageStore(state => state.gen);
 
   const messagesEndRef = useRef(null)
 
@@ -55,6 +59,8 @@ export default function App() {
     if (input.trim()) {
 
       const { data: user_data, error: user_error } = await supabase.auth.getUser();
+
+
       try {
         let newMessage;
         if (user_data.user) {
@@ -84,29 +90,44 @@ export default function App() {
         setInput("")
         setIsTyping(true)
 
-        const response = await fetch(`${import.meta.env.VITE_URL}/chat`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            query: newMessage.content,
-            language: language,
-          }),
-        })
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch response from the server.")
+        let data;
+        if (gen) {
+          const client = await Client.connect("Qwen/Qwen2.5-Max-Demo");
+          const result = await client.predict("/model_chat", {
+            query: input,
+            history: [],
+            system: `You are a friendly Farmer Chatbot based in the Philippines, Who Speaks ${language}, Youre only knowledge is about Farming, all query that are not related to farming will be ignored or be asked again`,
+          });
+
+          data = result.data[1][0][1]
+        } else {
+          const response = await fetch(`${import.meta.env.VITE_URL}/chat`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              query: newMessage.content,
+              language: language,
+            }),
+          })
+
+          if (!response.ok) {
+            throw new Error("Failed to fetch response from the server.")
+          }
+          const bt = await response.json()
+          data = bt.answer;
         }
 
-        const data = await response.json()
+
 
         let botReply;
         if (user_data.user) {
           const { data: bot, error } = await supabase
             .from('Conversations')
             .insert([
-              { role: 'assistant', content: data.answer || "Sorry, I couldn't process that.", user_uid: user_data.user.id },
+              { role: 'assistant', content: data || "Sorry, I couldn't process that.", user_uid: user_data.user.id },
             ])
             .select('*')
 
@@ -122,7 +143,7 @@ export default function App() {
           botReply = {
             id: String(messages.length + 2),
             role: "assistant",
-            content: data.answer || "Sorry, I couldn't process that.",
+            content: data || "Sorry, I couldn't process that.",
           }
         }
 
@@ -201,7 +222,11 @@ export default function App() {
                     className={`p-3 rounded-lg ${message.role === "user" ? "bg-green-500 text-white" : "bg-white border border-green-200"
                       }`}
                   >
-                    {message.content}
+                    <Markdown remarkPlugins={[remarkGfm]}>
+
+                      {message.content}
+                    </Markdown>
+
                   </div>
                 </div>
                 {message.role === "user" && (

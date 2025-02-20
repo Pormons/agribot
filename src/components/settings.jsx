@@ -8,14 +8,23 @@ import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import useAuthStore from "../store/useAuthStore";
 import { supabase } from "@/lib/supabase";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 export default function SettingsDialog() {
     const signedIn = useAuthStore(state => state.signed_in);
     const setSignedIn = useAuthStore(state => state.setSignedIn);
     const language = useLanguageStore(state => state.language);
     const setLanguage = useLanguageStore(state => state.setLanguage);
+    const setGen = useLanguageStore(state => state.setGen);
+    const gen = useLanguageStore(state => state.gen);
+
     const handleLanguageSelect = (value) => {
         setLanguage(value)
+    }
+
+    const handleSwitch = (toggle) => {
+        setGen(toggle)
     }
 
     const handleLogout = async () => {
@@ -67,6 +76,14 @@ export default function SettingsDialog() {
                             <SelectItem value="Tagalog">Tagalog</SelectItem>
                         </SelectContent>
                     </Select>
+                    <Separator className="my-5 w-full bg-zinc-600" />
+                    <div className="flex items-center space-x-2">
+                        <Switch
+                            checked={gen} // Bind to state
+                            onCheckedChange={handleSwitch} // Handle the change event
+                            id="airplane-mode" className={`${gen ? "bg-green-700" : "bg-zinc-500"} ring-offset-2 ring-indigo-300`} />
+                        <Label htmlFor="airplane-mode" className="text-zinc-600">Farm Gen Ai</Label>
+                    </div>
 
 
                 </div>
