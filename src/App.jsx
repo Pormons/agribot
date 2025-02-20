@@ -2,39 +2,88 @@
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AnimatePresence, motion } from "framer-motion"
 import { Send, Sparkles, User } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+import Header from "./components/navbar"
+import useLanguageStore from "./store/LanguageStore"
+import useAuthStore from "./store/useAuthStore"
+import { supabase } from "@/lib/supabase"
 
 export default function App() {
+  const setSignedIn = useAuthStore(state => state.setSignedIn);
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [replyTo, setReplyTo] = useState(null)
-  const [language, setLanguage] = useState("English")
+  const language = useLanguageStore(state => state.language);
+
   const messagesEndRef = useRef(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
-  useEffect(() => scrollToBottom(), [messages]) //Fixed useEffect dependency
+  useEffect(() => scrollToBottom(), [messages])
+
+  const checkAuth = async () => {
+    const { data, error } = await supabase.auth.getUser();
+
+    if (data.user) { // Check if `user` exists and has a valid `id`
+      console.log('true', data.user);
+
+      const { data: history, error: history_error } = await supabase.from('Conversations').select("*").eq('user_uid', data.user.id).order('created_at', {
+        ascending: true
+      })
+
+      setMessages(history);
+      console.log(history)
+      setSignedIn(true);
+    } else {
+      console.log('false', data.user);
+      setSignedIn(false);
+    }
+  }
+
+
+  useEffect(() => {
+    checkAuth()
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (input.trim()) {
-      const newMessage = {
-        id: String(messages.length + 1),
-        role: "user",
-        content: replyTo ? `Replying to: "${replyTo.content.substring(0, 50)}..."\n\n${input}` : input,
-      }
-      setMessages([...messages, newMessage])
-      setInput("")
-      setIsTyping(true)
-      setReplyTo(null)
 
+      const { data: user_data, error: user_error } = await supabase.auth.getUser();
       try {
+        let newMessage;
+        if (user_data.user) {
+          const { data, error } = await supabase
+            .from('Conversations')
+            .insert([
+              { role: 'user', content: input, user_uid: user_data.user.id },
+            ])
+            .select('*')
+
+          if (error) {
+            console.log('user error', error);
+          }
+
+          if (data) {
+            newMessage = data[0];
+          }
+        } else {
+          newMessage = {
+            id: String(messages.length + 1),
+            role: "user",
+            content: input,
+          }
+        }
+
+        setMessages([...messages, newMessage])
+        setInput("")
+        setIsTyping(true)
+
         const response = await fetch(`${import.meta.env.VITE_URL}/chat`, {
           method: "POST",
           headers: {
@@ -52,43 +101,79 @@ export default function App() {
 
         const data = await response.json()
 
-        const botReply = {
-          id: String(messages.length + 2),
-          role: "assistant",
-          content: data.answer || "Sorry, I couldn't process that.",
+        let botReply;
+        if (user_data.user) {
+          const { data: bot, error } = await supabase
+            .from('Conversations')
+            .insert([
+              { role: 'assistant', content: data.answer || "Sorry, I couldn't process that.", user_uid: user_data.user.id },
+            ])
+            .select('*')
+
+          if (error) {
+            console.log('user error', error);
+          }
+
+          if (data) {
+            console.log('bot', bot[0])
+            botReply = bot[0];
+          }
+        } else {
+          botReply = {
+            id: String(messages.length + 2),
+            role: "assistant",
+            content: data.answer || "Sorry, I couldn't process that.",
+          }
         }
 
         setMessages((prev) => [...prev, botReply])
       } catch (error) {
-        console.error("Error fetching response:", error)
 
-        const errorMessage = {
-          id: String(messages.length + 2),
-          role: "assistant",
-          content: "Oops! Something went wrong. Please try again later.",
+        let error_message;
+        if (user_data.user) {
+          const { data, error } = await supabase
+            .from('Conversations')
+            .insert([
+              { role: 'assistant', content: "Oops! Something went wrong. Please try again later.", user_uid: user_data.user.id },
+            ])
+            .select('*')
+
+          if (error) {
+            console.log('user error', error);
+          }
+
+          if (data) {
+            error_message = data[0];
+          }
+        } else {
+          error_message = {
+            id: String(messages.length + 2),
+            role: "assistant",
+            content: "Oops! Something went wrong. Please try again later.",
+          }
         }
-        setMessages((prev) => [...prev, errorMessage])
+        console.error("Error fetching response:", error)
+        setMessages((prev) => [...prev, error_message])
       } finally {
         setIsTyping(false)
       }
     }
   }
 
-  const handleLanguageSelect = (value) => {
-    setLanguage(value)
-  }
+
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-green-50 to-white">
-      <div className="flex-grow overflow-hidden">
-        <div className="h-full overflow-y-auto p-4 sm:p-6 sm:max-w-2xl sm:mx-auto">
+    <div className="flex flex-col h-screen">
+      <Header />
+      <div className="flex-grow overflow-hidden bg-gradient-to-br from-green-50 to-white">
+        <div className="h-full overflow-y-auto p-4 sm:p-6 sm:max-w-2xl sm:mx-auto mt-4">
           <div className="space-y-4">
             {messages.length === 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="flex flex-col items-center mt-24 justify-center h-full text-center"
+                className="flex flex-col grow items-center justify-center h-full text-center"
               >
                 <div className="w-24 h-24 mb-6 rounded-full bg-green-100 flex items-center justify-center animate-float">
                   <Sparkles className="w-12 h-12 text-green-500" />
@@ -96,23 +181,6 @@ export default function App() {
                 <h2 className="text-2xl font-bold text-green-600 mb-2">Welcome to Agri-Bot!</h2>
                 <p className="text-gray-600 mb-4">Start your conversation with our friendly chatbot.</p>
                 <p className="text-lg font-medium text-green-500">Try saying &quot;Hi&quot; or asking a question!</p>
-
-                <div className="mt-10">
-                  <div className="mb-2">
-                    <span className="font-medium text-sm text-gray-600">Select Preferred Language</span>
-                  </div>
-
-                  <Select className=" focus:outline-none mt-2" value={language} onValueChange={handleLanguageSelect}>
-                    <SelectTrigger className="w-[180px] bg-white">
-                      <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      <SelectItem value="English">English</SelectItem>
-                      <SelectItem value="Bisaya (Cebuano)">Bisaya</SelectItem>
-                      <SelectItem value="Tagalog">Tagalog</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </motion.div>
             )}
             {messages.map((message) => (
