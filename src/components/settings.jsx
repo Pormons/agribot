@@ -1,15 +1,14 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings } from "lucide-react";
-import useLanguageStore from "../store/LanguageStore";
-import LoginDialog from "../LoginDialog";
-import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { useEffect } from "react";
-import useAuthStore from "../store/useAuthStore";
-import { supabase } from "@/lib/supabase";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/lib/supabase";
+import { Settings } from "lucide-react";
+import LoginDialog from "../LoginDialog";
+import useLanguageStore from "../store/LanguageStore";
+import useAuthStore from "../store/useAuthStore";
 
 export default function SettingsDialog() {
     const signedIn = useAuthStore(state => state.signed_in);
