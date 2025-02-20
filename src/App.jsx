@@ -97,7 +97,7 @@ export default function App() {
           const result = await client.predict("/model_chat", {
             query: input,
             history: [],
-            system: `You are a friendly Farmer Chatbot based in the Philippines, Who Speaks ${language}, Youre only knowledge is about Farming, all query that are not related to farming will be ignored or be asked again`,
+            system: `You are a friendly Farmer Chatbot named Mang Juan based in the Philippines, Who Speaks ${language}, Youre only knowledge is about Farming, all query that are not related to farming will be ignored or be asked again`,
           });
 
           data = result.data[1][0][1]

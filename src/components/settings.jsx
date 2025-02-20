@@ -82,7 +82,7 @@ export default function SettingsDialog() {
                             checked={gen} // Bind to state
                             onCheckedChange={handleSwitch} // Handle the change event
                             id="airplane-mode" className={`${gen ? "bg-green-700" : "bg-zinc-500"} ring-offset-2 ring-indigo-300`} />
-                        <Label htmlFor="airplane-mode" className="text-zinc-600">Farm Gen Ai</Label>
+                        <Label htmlFor="airplane-mode" className="text-zinc-600">Mang Juan</Label>
                     </div>
 
 
