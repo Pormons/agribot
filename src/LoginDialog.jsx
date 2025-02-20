@@ -36,10 +36,7 @@ export default function LoginDialog() {
 
   const handleOAuthSignIn = async (provider) => {
     const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+      provider
     })
     if (error) console.error(`Error signing in with ${provider}:`, error)
   }
